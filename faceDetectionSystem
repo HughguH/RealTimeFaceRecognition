@@ -1,0 +1,109 @@
+import cv2 as cv
+import time
+
+
+class FaceRecognition():
+    #constructor of FaceRecognition class
+    def __init__(self):
+        #creating one time a instances ,and reading only once xml files
+        self.face_cascade = cv.CascadeClassifier(cv.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        self.eyes_cascade = cv.CascadeClassifier(cv.data.haarcascades + 'haarcascade_eye_tree_eyeglasses.xml')
+
+        if self.face_cascade.empty() or self.eyes_cascade.empty():
+            print("There are no classifiers")
+    def MultiFaceFunction(self, frame, mode):
+        if mode !=0:
+            #haarcascade workd on one channel matrix
+            gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+
+            faces = self.face_cascade.detectMultiScale(gray, 1.1, 6)
+
+            for (x, y, w, h) in faces:
+                if mode == 1 or mode ==2:
+                    #now we are drawing rectangle around face
+                    cv.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 50), 2)
+
+                #with our face detected we are now searching for eyes only in this specific area
+                face_gray = gray[y:y + h, x:x + w]
+                if mode ==1 or mode ==3:
+                    #anotherfunction that detects this time eyes
+                    eyes = self.eyes_cascade.detectMultiScale(face_gray, scaleFactor=1.1, minNeighbors=10)
+
+                    for (ex, ey, ew, eh) in eyes:
+                        eye_center_x = x + ex + ew // 2
+                        eye_center_y = y + ey + eh // 2
+                        eye_center = (eye_center_x, eye_center_y)
+                        #drawing eclipse around eyes
+                        cv.ellipse(frame, eye_center, (ew // 2, eh // 4), 0, 0, 360, (255, 0, 0), 2)
+        
+        info_array = ["No recognition","Full recognition", " only Face", " only Eyes"]
+        cv.putText(frame, f"Tryb nr.{mode}\n {info_array[mode]}",(25,25), cv.FONT_HERSHEY_DUPLEX, 1.0, (0, 255, 0))
+        return frame
+
+        
+
+
+
+if __name__ == "__main__":
+    #initial value of mode
+    mode = 0 
+    #cap object
+    cap = cv.VideoCapture(0)
+    #object of our FaceRecognition class
+    ofaceRecognition = FaceRecognition()
+    currentTime = 0
+    prevTime = 0
+
+    #
+    print(
+    "In this program you can switch between modes\n " \
+    "Each mode have it own properties" \
+    "Mode 1: It recognise your face and eyes\n" \
+    "Mode 2: It recognise your face but without eyes\n" \
+    "Mode 3: It recognise your eyes without face\n" \
+    "To go to each module just press 1, 2 or 3\n" \
+    "If you want to quit just press q\n"
+    )
+
+    while True:
+
+        ret, frame = cap.read()
+
+        #if frame wasnt load properly
+        if not ret:
+            break
+        
+        #mirror flip our video
+        frame = cv.flip(frame, 1)
+
+        #variable key, it controlls mode of program
+        v_key = cv.waitKey(1)
+
+        #modes of program
+        if v_key == ord('1'):
+            mode = 1
+        elif v_key == ord('2'):
+            mode = 2
+        elif v_key == ord('3'):
+            mode =3
+        elif v_key == ord('q'):
+            break
+        
+        frame = ofaceRecognition.MultiFaceFunction(frame,mode)
+        
+        
+        currentTime = time.time()
+        fps = 1/(currentTime-prevTime)
+        fps = round(fps, 0)
+        prevTime = currentTime
+
+        cv.putText(frame, f"FPS : {fps}",(25,50), cv.FONT_HERSHEY_DUPLEX, 1.0, (0, 255, 0) )
+        #output of our video
+        cv.imshow('OpenCv Video Program', frame)
+
+
+    
+    # When everything done, release the capture
+    cap.release()
+    cv.destroyAllWindows()
+    
